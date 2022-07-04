@@ -17,6 +17,6 @@ router.post('/signin', signin);
 
 router.post('/forget-password', forgetPassword);
 
-router.post('/reset-password', resetPassword);
+router.post('/reset-password/:token', resetPassword);
 
 export const authRoutes = router;

@@ -83,9 +83,9 @@ export const resetPasswordMail = async (name, email, token) => {
       html:
         '<p> Hi ' +
         name +
-        ', Please click <a href="http://localhost:4001/api/users/reset-password?token=' +
+        ', Please click <a href="https://password-reset-project.netlify.app/#/reset-password/' +
         token +
-        '"> here </a> to reset your password.</p>',
+        '"> here </a> to reset your password.The link will be expired in 15 minutes.</p>',
     };
 
     transporter.sendMail(message, (err, info) => {
@@ -106,11 +106,18 @@ export const forgetPassword = async (req, res) => {
     const isUserExist = await usersDetails.findOne({ email: req.body.email });
     if (isUserExist) {
       const randomString = randomstring.generate();
+      let token_pass = jwt.sign(
+        { name: isUserExist.name, id: isUserExist._id },
+        randomString,
+        {
+          expiresIn: '15m',
+        }
+      );
       const data = await usersDetails.updateOne(
         { email: req.body.email },
-        { $set: { token: randomString } }
+        { $set: { token: token_pass } }
       );
-      resetPasswordMail(isUserExist.name, isUserExist.email, randomString);
+      resetPasswordMail(isUserExist.name, isUserExist.email, token_pass);
       res.status(200).json({
         message: 'Please check your inbox of email and reset your password',
       });
@@ -129,7 +136,7 @@ export const resetPassword = async (req, res) => {
     if (req.body.password !== req.body.confirm_password) {
       res.status(400).json({ message: 'Passwords do not match' });
     } else {
-      const token = req.query.token;
+      const token = req.params.token;
       const tokenData = await usersDetails.findOne({ token: token });
       if (tokenData) {
         const password = req.body.password;
@@ -139,12 +146,10 @@ export const resetPassword = async (req, res) => {
           { $set: { hashedPassword: newPassword, token: '' } },
           { new: true }
         );
-        res
-          .status(200)
-          .json({
-            message: 'Your password reset successfully',
-            data: userData,
-          });
+        res.status(200).json({
+          message: 'Your password reset successfully',
+          data: userData,
+        });
       } else {
         res.status(400).json({ message: 'This link has been expired' });
       }
