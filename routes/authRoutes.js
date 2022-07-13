@@ -4,6 +4,7 @@ import {
   resetPassword,
   signin,
   signup,
+  accountActivate,
 } from '../controller/auth.js';
 const router = express.Router();
 
@@ -12,6 +13,8 @@ router.get('/', (req, res) => {
 });
 
 router.post('/signup', signup);
+
+router.post('/account-activate/:token', accountActivate);
 
 router.post('/signin', signin);
 

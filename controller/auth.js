@@ -10,25 +10,103 @@ const securePassword = async (password) => {
   return hash;
 };
 
-export const signup = async (req, res) => {
+// email account activate
+export const accountActivateMail = async (name, email, token) => {
   try {
-    const newPassword = await securePassword(req.body.password);
-    req.body.hashedPassword = newPassword;
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
 
-    let user = new usersDetails(req.body);
-    user.save((err, data) => {
+    var message = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'For activate Account',
+      html:
+        '<p> Hi ' +
+        name +
+        ', Please click <a href="https://password-reset-project.netlify.app/#/reset-password/' +
+        token +
+        '"> here </a> to activate your account.The link will be expired in 15 minutes.</p>',
+    };
+
+    transporter.sendMail(message, (err, info) => {
       if (err) {
         console.log(err);
+      } else {
+        console.log('Mail has been sent', info.response);
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const signup = async (req, res) => {
+  try {
+    usersDetails.findOne({ email: req.body.email }, (err, isEmail) => {
+      if (isEmail) {
         return res
           .status(400)
-          .json({ message: 'Data is not inserted properly' });
-      } else {
-        res.status(201).json(data);
+          .json({ message: 'User with this email already exists' });
       }
+
+      let token_activate = jwt.sign(
+        { name: req.body.firstname, email: req.body.email },
+        process.env.SECRET_TOKEN,
+        {
+          expiresIn: '15m',
+        }
+      );
+      accountActivateMail(req.body.firstname, req.body.email, token_activate);
+      return res.status(200).json({
+        message: 'Email has been sent, kindly activate your account',
+      });
     });
   } catch (error) {
     res.status(500).send('Internal server error');
     console.log('something went wrong', error);
+  }
+};
+
+// account activate api
+export const accountActivate = (req, res) => {
+  const activate_token = req.params.token;
+  if (activate_token) {
+    jwt.verify(activate_token, process.env.SECRET_TOKEN, (err) => {
+      if (err) {
+        return res.status(400).json({ message: 'The link has been expired' });
+      }
+      usersDetails.findOne({ email: req.body.email }, async (err, isEmail) => {
+        if (isEmail) {
+          return res
+            .status(400)
+            .json({ message: 'User with this email already exists' });
+        }
+        const newPassword = await securePassword(req.body.password);
+        req.body.hashedPassword = newPassword;
+
+        let user = new usersDetails(req.body);
+        user.save((err, data) => {
+          if (err) {
+            console.log(err);
+            return res
+              .status(400)
+              .json({ message: 'Error activating account' });
+          } else {
+            res
+              .status(201)
+              .json({ message: 'Signup Successfully', data: data });
+          }
+        });
+      });
+    });
   }
 };
 
