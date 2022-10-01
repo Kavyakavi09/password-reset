@@ -13,6 +13,9 @@ app.use(cors());
 // dotenv environment setup
 dotenv.config();
 
+app.get('/', (req, res) => {
+  res.status(200).json('Welcome to My App');
+});
 // To connected with routes
 app.use('/api/users', authRoutes);
 
@@ -23,3 +26,6 @@ app.listen(port, async () => {
   // connect to the database
   await connect();
 });
+
+// Export the Express API
+export default app;
