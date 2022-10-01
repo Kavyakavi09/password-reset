@@ -26,6 +26,3 @@ app.listen(port, async () => {
   // connect to the database
   await connect();
 });
-
-// Export the Express API
-export default app;
